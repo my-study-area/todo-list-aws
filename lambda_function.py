@@ -6,7 +6,8 @@ import uuid
 TABLE_NAME = 'TodoList'
 
 def handler(event, context):
-  operation = event['operation']
+  payload = json.loads(event.get('body'))
+  operation = payload.get('operation')
   dynamo = boto3.resource('dynamodb', endpoint_url="http://localhost:8000").Table(TABLE_NAME)
 
   operations = {
@@ -14,11 +15,10 @@ def handler(event, context):
     'read': lambda payload: read(dynamo=dynamo, payload=payload),
     'update': lambda payload: update(dynamo=dynamo, payload=payload),
     'delete': lambda payload: delete(dynamo=dynamo, payload=payload)
-
   }
 
   if operation in operations:
-    resposta = operations[operation](payload=event)
+    resposta = operations[operation](payload=payload)
     return resposta
   else:
     return {
@@ -33,7 +33,7 @@ def create(dynamo, payload):
   dynamo.put_item(Item=item)
   return {
     "statusCode": 201,
-    "body": json.dumps(item)
+    "body": json.dumps(item, ensure_ascii=False)
   }
 
 def read(dynamo, payload):
@@ -43,7 +43,7 @@ def read(dynamo, payload):
   if not resposta.get('Item'):
     return {
       "statusCode": 404,
-      "body": json.dumps({'error': 'Tarefa não encontrada'})
+      "body": json.dumps({'error': 'Tarefa não encontrada'}, ensure_ascii=False)
     }
   return {
     "statusCode": 200,
@@ -62,9 +62,10 @@ def update(dynamo, payload):
       ExpressionAttributeValues={':descricao': descricao},
       ReturnValues="UPDATED_NEW"
     )
+    item['descricao'] = descricao
     return {
       "statusCode": 200,
-      "body": json.dumps(resposta)
+      "body": json.dumps(item, ensure_ascii=False)
     }
 
   return {
@@ -75,7 +76,7 @@ def update(dynamo, payload):
 def delete(dynamo, payload):
   id = payload.get('id')
   item = { "id": id }
-  resposta = dynamo.delete_item(Key=item)
+  dynamo.delete_item(Key=item)
   return {
     "statusCode": 200
   }
