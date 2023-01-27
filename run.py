@@ -1,74 +1,77 @@
+import http
 import json
 import random
-from lambda_function import TABLE_NAME, create, handler
+from lambda_function import TABLE_NAME, create, lambda_handler
 import boto3
 
 id = random.randint(1, 100)
 dynamo = boto3.resource('dynamodb', endpoint_url="http://localhost:8000").Table(TABLE_NAME)
+descricao = f"Descricao {id}"
 
 event_body = {
-  'operation': 'create',
-  "descricao": f'descricao {id}'
+  "descricao": descricao
 }
 event_create = {
+  "httpMethod": "POST",
   "body": json.dumps(event_body)
 }
 
-task_criada = create(dynamo, payload=event_body)
+task_criada = create(dynamo, event=event_create)
 id_task = json.loads(task_criada.get('body')).get('id')
-event_body = {
-  'operation': 'read',
-  "id": id_task
-}
 event_read = {
-  "body": json.dumps(event_body)
+    "httpMethod": "GET",
+    "pathParameters": {
+      "task_id": id_task
+    }
 }
 
-event_body = {
-  'operation': 'read',
-  "id": "id nao encontrado"
-}
+
 event_read_not_found = {
-  "body": json.dumps(event_body)
+    "httpMethod": "GET",
+    "pathParameters": {
+        "task_id": 'id nao encontrado'
+    }
 }
 
 event_body = {'operation': 'invalida'}
 event_invalid_operation = {
-  "body": json.dumps(event_body)
+    "httpMethod": "PATCH"
 }
 
 event = {
-  'operation': 'update',
   "id": id_task,
   'descricao': f'update-{id}'
 }
 event_update = {
-  "body": json.dumps(event)
+    "httpMethod": "PUT",
+    "pathParameters": {
+      "task_id": id_task
+    },
+    "body": json.dumps(event)
 }
 
-event = {
-  'operation': 'update',
-  "id": "notfound",
-  'descricao': f'update-{id}'
-}
 event_update_not_found = {
+    "httpMethod": "UPDATE",
+    "pathParameters": {
+      "task_id": 'id nao encontrada'
+    },
   "body": json.dumps(event)
 }
 
-event = {
-  'operation': 'delete',
-  "id": "96549f56-9798-11ed-8c0d-283a4d9332d9"
-}
+
 event_delete = {
-  "body": json.dumps(event)
+  "httpMethod": "DELETE",
+  "pathParameters": {
+    "task_id": id_task
+  }
 }
 context = None
 
-# response = handler(event_create, context)
-# response = handler(event_read, context)
-# response = handler(event_read_not_found, context)
-# response = handler(event_invalid_operation, context)
-# response = handler(event_update, context)
-# response = handler(event_update_not_found, context)
-response = handler(event_delete, context)
+# response = lambda_handler(event_create, context)
+# response = lambda_handler(event_read, context)
+# response = lambda_handler(event_read_not_found, context)
+# response = lambda_handler(event_invalid_operation, context)
+response = lambda_handler(event_update, context)
+# response = lambda_handler(event_update_not_found, context)
+# response = lambda_handler(event_delete, context)
 print(response)

@@ -5,20 +5,19 @@ import uuid
 
 TABLE_NAME = 'TodoList'
 
-def handler(event, context):
-  payload = json.loads(event.get('body'))
-  operation = payload.get('operation')
+def lambda_handler(event, context):
+  operation = event.get('httpMethod')
   dynamo = boto3.resource('dynamodb', endpoint_url="http://localhost:8000").Table(TABLE_NAME)
 
   operations = {
-    'create': lambda payload: create(dynamo=dynamo, payload=payload),
-    'read': lambda payload: read(dynamo=dynamo, payload=payload),
-    'update': lambda payload: update(dynamo=dynamo, payload=payload),
-    'delete': lambda payload: delete(dynamo=dynamo, payload=payload)
+    'POST': lambda event: create(dynamo=dynamo, event=event),
+    'GET': lambda event: read(dynamo=dynamo, event=event),
+    'PUT': lambda event: update(dynamo=dynamo, event=event),
+    'DELETE': lambda event: delete(dynamo=dynamo, event=event)
   }
 
   if operation in operations:
-    resposta = operations[operation](payload=payload)
+    resposta = operations[operation](event=event)
     return resposta
   else:
     return {
@@ -26,8 +25,10 @@ def handler(event, context):
       "body": json.dumps({"mensagem": f"Erro ao realizar a operação {operation}"}, ensure_ascii=False)
     }
 
-def create(dynamo, payload):
+def create(dynamo, event):
   id = str(uuid.uuid1())
+  body = event.get('body')
+  payload = json.loads(body)
   descricao = payload.get('descricao')
   item = { "id": id, "descricao": descricao }
   dynamo.put_item(Item=item)
@@ -36,8 +37,9 @@ def create(dynamo, payload):
     "body": json.dumps(item, ensure_ascii=False)
   }
 
-def read(dynamo, payload):
-  id = payload.get('id')
+def read(dynamo, event):
+  payload = event.get('pathParameters')
+  id = payload.get('task_id')
   item = { "id": id }
   resposta = dynamo.get_item(Key=item)
   if not resposta.get('Item'):
@@ -50,12 +52,15 @@ def read(dynamo, payload):
     "body": json.dumps(resposta.get('Item'), ensure_ascii=False)
   }
 
-def update(dynamo, payload):
-  id = payload.get('id')
+def update(dynamo, event):
+  payload = event.get('pathParameters')
+  id = payload.get('task_id')
+  body = event.get('body')
+  payload = json.loads(body)
   descricao = payload.get('descricao')
   item = { "id": id }
 
-  if(read(dynamo, payload).get('statusCode') == 200):
+  if(read(dynamo, event).get('statusCode') == 200):
     resposta = dynamo.update_item(
       Key=item,
       UpdateExpression="set descricao=:descricao",
@@ -73,8 +78,9 @@ def update(dynamo, payload):
     "body": json.dumps({'error': 'Tarefa não encontrada'}, ensure_ascii=False)
   }
 
-def delete(dynamo, payload):
-  id = payload.get('id')
+def delete(dynamo, event):
+  payload = event.get('pathParameters')
+  id = payload.get('task_id')
   item = { "id": id }
   dynamo.delete_item(Key=item)
   return {
