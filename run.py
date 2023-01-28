@@ -33,14 +33,13 @@ event_read_not_found = {
     }
 }
 
-event_body = {'operation': 'invalida'}
 event_invalid_operation = {
     "httpMethod": "PATCH"
 }
 
 event = {
   "id": id_task,
-  'descricao': f'update-{id}'
+  "descricao": f"update-{id}"
 }
 event_update = {
     "httpMethod": "PUT",
@@ -67,11 +66,11 @@ event_delete = {
 }
 context = None
 
-# response = lambda_handler(event_create, context)
+response = lambda_handler(event_create, context)
 # response = lambda_handler(event_read, context)
 # response = lambda_handler(event_read_not_found, context)
 # response = lambda_handler(event_invalid_operation, context)
-response = lambda_handler(event_update, context)
+# response = lambda_handler(event_update, context)
 # response = lambda_handler(event_update_not_found, context)
 # response = lambda_handler(event_delete, context)
 print(response)
